@@ -241,6 +241,20 @@ Each generated HTML overlays:
 
 The HTML includes controls to show/hide individual point clouds.
 
+#### 9. Follow-up (patients with more than one visit)
+
+```bash
+python eval_aev3_followup.py \
+  --overlay_root align_mean_movement_refactor/four_cloud_eval_overlays \
+  --overlay_index align_mean_movement_refactor/four_cloud_eval_overlays/overlay_index.csv \
+  --metadata facemocap_metadata_reference_split.csv \
+  --semantic_labels semantic_facial_labels.csv \
+  --out_dir align_mean_movement_refactor/aev3_followup_eval \
+  --fs_hz 100 \
+  --lowpass_hz 8 \
+  --min_dates 2
+```
+
 ## Programmatic Use
 
 Use `HealthyReferenceReconstructor` directly in downstream metric or visualization code:
