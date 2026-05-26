@@ -241,7 +241,7 @@ Each generated HTML overlays:
 
 The HTML includes controls to show/hide individual point clouds.
 
-#### 9. Follow-up (patients with more than one visit)
+### 9. Follow-up (patients with more than one visit)
 
 ```bash
 python eval_aev3_followup.py \
