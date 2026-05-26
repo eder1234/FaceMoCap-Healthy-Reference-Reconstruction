@@ -1,0 +1,106 @@
+marker_id,region,side,label
+0,front,right,F1
+1,front,right,F2
+2,front,right,F3
+3,front,center,F4
+4,front,left,F5
+5,front,left,F6
+6,front,left,F7
+7,eyebrow,right,S1
+8,eyebrow,right,S2
+9,eyebrow,right,S3
+10,eyebrow,right,S4
+11,eyebrow,right,S5
+12,nasion,center,G0
+13,eyebrow,left,S6
+14,eyebrow,left,S7
+15,eyebrow,left,S8
+16,eyebrow,left,S9
+17,eyebrow,left,S10
+18,nasal bone,center,D1
+19,nasal bone,center,D2
+20,nasal bone,center,D3
+21,philtrum,center,D4
+22,lateral cantus,right,Ca01
+23,palpebra-malar groove,right,Vl1
+24,palpebra-malar groove,right,Vl2
+25,palpebra-malar groove,right,Vl3
+26,medial canthus,right,Ca02
+27,medial canthus,left,Ca03
+28,palpebra-malar groove,left,Vl4
+29,palpebra-malar groove,left,Vl5
+30,palpebra-malar groove,left,Vl6
+31,lateral cantus,left,Ca04
+32,ala of nose,left,N3
+33,ala of nose,left,N4
+34,levator superioris nasi,left,Pln7
+35,levator superioris nasi,left,Pln8
+36,levator superioris nasi,left,Pln9
+37,levator superioris nasi,left,Pln10
+38,levator superioris nasi,left,Pln11
+39,levator superioris,left,R5
+40,labial commisure,left,C02
+41,upper lip,left,Cms7
+42,upper lip,left,Cms5
+43,upper lip,right,Cms3
+44,upper lip,right,Cms1
+45,labial commisure,right,C01
+46,zygomaticus minor,right,Z5
+47,zygomaticus minor,right,Z4
+48,zygomaticus minor,right,Z3
+49,zygomaticus minor,right,Z2
+50,zygomaticus minor,right,Z1
+51,zygomaticus major,right,BZ1
+52,zygomaticus major,right,BZ2
+53,zygomaticus major,right,BZ3
+54,zygomaticus major,right,BZ4
+55,zygomaticus major,right,BZ5
+56,depressor anguli oris,right,Dao1
+57,depressor anguli oris,right,Dao2
+58,depressor anguli oris,right,Dao3
+59,zygomaticus major,right,B6
+60,zygomaticus major,right,B5
+61,zygomaticus major,right,B4
+62,zygomaticus major,right,B3
+63,zygomaticus major,right,B2
+64,zygomaticus major,right,B1
+65,lower lip,right,Cmi1
+66,lower lip,center,Cmi3
+67,lower lip,left,Cmi5
+68,mentalis,right,H3
+69,mentalis,right,H1
+70,mentalis,center,H0
+71,mentalis,center,M0
+72,mentalis,left,H6
+73,mentalis,left,H4
+74,depressor anguli oris,left,Dao4
+75,depressor anguli oris,left,Dao5
+76,depressor anguli oris,left,Dao6
+77,zygomaticus major,left,B12
+78,zygomaticus major,left,B11
+79,zygomaticus major,left,B10
+80,zygomaticus major,left,B9
+81,zygomaticus major,left,B8
+82,zygomaticus major,left,B7
+83,zygomaticus major,left,BZ6
+84,zygomaticus major,left,BZ7
+85,zygomaticus major,left,BZ8
+86,zygomaticus major,left,BZ9
+87,zygomaticus major,left,BZ10
+88,zygomaticus minor,left,Z11
+89,zygomaticus minor,left,Z10
+90,zygomaticus minor,left,Z9
+91,zygomaticus minor,left,Z8
+92,zygomaticus minor,left,Z7
+93,levator superioris,right,R2
+94,levator superioris nasi,right,Pln1
+95,levator superioris nasi,right,Pln2
+96,levator superioris nasi,right,Pln3
+97,levator superioris nasi,right,Pln4
+98,levator superioris nasi,right,Pln5
+99,ala of nose,left,N1
+100,ala of nose,left,N2
+101,upper eyelid,right,Pps01
+102,lower eyelid,right,Lc2
+103,upper eyelid,left,Pps02
+104,lower eyelid,left,Lc5
