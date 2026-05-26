@@ -223,6 +223,7 @@ This writes AE-v3 score tables and `.npz` predictions.
 python export_four_cloud_eval_overlays.py \
   --metadata facemocap_metadata_reference_split.csv \
   --out_dir align_mean_movement_refactor/four_cloud_eval_overlays
+  --save_npz
 ```
 
 Open:
