@@ -294,6 +294,26 @@ def write_index(rows: List[Dict[str, object]], out_dir: Path) -> None:
     )
 
 
+def save_reconstruction_npz(result: HealthyReconstructions, out_npz: Path) -> None:
+    out_npz.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        out_npz,
+        observed_face=result.observed_face,
+        healthy_mean_trajectory=result.healthy_mean_trajectory,
+        healthy_mean_velocity_face=result.healthy_mean_velocity_face,
+        aev3_healthy_reconstruction=result.aev3_healthy_reconstruction,
+        target_mask=result.target_mask,
+        target_neutral_face=result.target_neutral_face,
+        target_displacement=result.target_displacement,
+        mean_velocity=result.mean_velocity,
+        mean_velocity_displacement=result.mean_velocity_displacement,
+        aev3_projected_neutral=result.aev3_projected_neutral,
+        aev3_projected_displacement=result.aev3_projected_displacement,
+        aev3_abnormal_mask=result.aev3_abnormal_mask,
+        aev3_abnormal_severity=result.aev3_abnormal_severity,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
     ap.add_argument("--metadata", default="facemocap_metadata_reference_split.csv")
@@ -305,6 +325,7 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--limit", type=int, default=0, help="Debug limit; 0 exports all selected samples.")
     ap.add_argument("--show_invalid_predictions", action="store_true")
     ap.add_argument("--force_reference_cache", action="store_true")
+    ap.add_argument("--save_npz", action="store_true", help="Also save one reconstruction NPZ per successful sample.")
     return ap.parse_args()
 
 
@@ -340,6 +361,13 @@ def main() -> None:
                 title=title,
                 hide_invalid_predictions=not args.show_invalid_predictions,
             )
+            out_npz = ""
+            out_npz_rel = ""
+            if args.save_npz:
+                npz_path = out_sample_dir / f"{sample_id}_four_cloud_reconstructions.npz"
+                save_reconstruction_npz(result, npz_path)
+                out_npz = str(npz_path)
+                out_npz_rel = relpath(npz_path, out_dir)
             index_rows.append(
                 {
                     "movement": movement,
@@ -351,6 +379,8 @@ def main() -> None:
                     "sample_id": result.sample_id,
                     "html_path": str(out_html),
                     "html_relpath": relpath(out_html, out_dir),
+                    "npz_path": out_npz,
+                    "npz_relpath": out_npz_rel,
                     "alignment_score": result.qc.get("alignment_score", np.nan),
                     "qc_valid_marker_frame_fraction": result.qc.get("qc_valid_marker_frame_fraction", np.nan),
                 }
