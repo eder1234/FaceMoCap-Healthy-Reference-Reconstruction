@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+build_healthy_twin_dataset_v3.py
+
+Build a v3 "healthy twin" dataset from the v2 FaceMoCap AE dataset.
+
+V3 separates:
+  1) static neutral morphology: N, shape (S,105,3)
+  2) dynamic neutral-relative motion: X, shape (S,100,105,3)
+  3) validity masks: M, shape (S,100,105)
+
+This script intentionally reuses the already-aligned/resampled v2 dataset produced by:
+  build_ae_dataset_v2.py
+
+Why not rebuild from raw CSV here?
+  The alignment/windowing code is the fragile part. Reusing v2 makes v3 experiments
+  comparable with AE-v2 and avoids hidden preprocessing differences.
+
+Outputs
+-------
+healthy_twin_dataset_v3/
+  M1/ ... M5/
+    X_train_healthy.npy, M_train_healthy.npy, N_train_healthy.npy, metadata_train_healthy.csv
+    X_eval_healthy.npy,  M_eval_healthy.npy,  N_eval_healthy.npy,  metadata_eval_healthy.csv
+    X_pathological.npy,  M_pathological.npy,  N_pathological.npy,  metadata_pathological.csv
+    reference_displacement.npy
+    reference_envelope_per_marker.csv
+  static_neutral/
+    N_train_healthy.npy
+    M_train_healthy.npy
+    metadata_train_healthy.csv
+    N_eval_healthy.npy
+    M_eval_healthy.npy
+    metadata_eval_healthy.csv
+    N_pathological.npy
+    M_pathological.npy
+    metadata_pathological.csv
+    semantic_symmetry_pairs.csv
+  dataset_manifest.json
+
+Recommended run
+---------------
+python build_healthy_twin_dataset_v3.py \
+  --v2_dataset_dir /path/to/ae_dataset_v2 \
+  --semantic_labels /path/to/semantic_facial_labels.csv \
+  --out_dir /path/to/healthy_twin_dataset_v3
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+from pathlib import Path
+from typing import Dict, List
+
+import numpy as np
+import pandas as pd
+
+
+def ensure_dir(p: Path) -> None:
+    p.mkdir(parents=True, exist_ok=True)
+
+
+def write_json(p: Path, obj: object) -> None:
+    p.write_text(json.dumps(obj, indent=2, ensure_ascii=False))
+
+
+def marker_mask_from_neutral(N: np.ndarray) -> np.ndarray:
+    """N: S,N,3 -> mask S,N."""
+    return np.isfinite(N).all(axis=-1).astype(np.uint8)
+
+
+def load_group(mov_dir: Path, group: str) -> Dict[str, object]:
+    Xp = mov_dir / f"X_{group}.npy"
+    Mp = mov_dir / f"M_{group}.npy"
+    Np = mov_dir / f"N_{group}.npy"
+    metap = mov_dir / f"metadata_{group}.csv"
+    if not Xp.exists() or not Mp.exists() or not Np.exists() or not metap.exists():
+        raise FileNotFoundError(f"Missing v2 group files for {mov_dir.name}/{group}")
+    X = np.load(Xp).astype(np.float32)
+    M = np.load(Mp).astype(np.uint8)
+    N = np.load(Np).astype(np.float32)
+    meta = pd.read_csv(metap)
+    return {"X": X, "M": M, "N": N, "meta": meta}
+
+
+def copy_group(dst_mov: Path, group: str, data: Dict[str, object]) -> None:
+    np.save(dst_mov / f"X_{group}.npy", data["X"])
+    np.save(dst_mov / f"M_{group}.npy", data["M"])
+    np.save(dst_mov / f"N_{group}.npy", data["N"])
+    data["meta"].to_csv(dst_mov / f"metadata_{group}.csv", index=False)
+
+
+def create_symmetry_pairs(labels_path: Path, out_path: Path) -> pd.DataFrame:
+    """
+    Create approximate left/right marker pairs by matching region and within-side order.
+    This is a weak anatomical prior, not a clinically validated symmetry map.
+    """
+    labels = pd.read_csv(labels_path)
+    required = {"marker_id", "region", "side", "label"}
+    missing = required - set(labels.columns)
+    if missing:
+        raise ValueError(f"semantic_labels missing columns: {missing}")
+    labels = labels.copy()
+    labels["marker_id"] = pd.to_numeric(labels["marker_id"], errors="coerce").astype("Int64")
+    labels = labels.dropna(subset=["marker_id"]).copy()
+    labels["marker_id"] = labels["marker_id"].astype(int)
+    rows = []
+    for region, sub in labels.groupby("region"):
+        right = sub[sub["side"].astype(str).str.lower() == "right"].sort_values("marker_id")
+        left = sub[sub["side"].astype(str).str.lower() == "left"].sort_values("marker_id")
+        if right.empty or left.empty:
+            continue
+        # Pair in reverse order to approximate mirror layout when lists run medial-to-lateral differently.
+        r_ids = right["marker_id"].tolist()
+        l_ids = left["marker_id"].tolist()[::-1]
+        for rank, (ri, li) in enumerate(zip(r_ids, l_ids), start=1):
+            rows.append({
+                "region": region,
+                "right_marker_id": int(ri),
+                "left_marker_id": int(li),
+                "right_label": str(right[right["marker_id"] == ri]["label"].iloc[0]),
+                "left_label": str(left[left["marker_id"] == li]["label"].iloc[0]),
+                "pair_rank": rank,
+            })
+    pairs = pd.DataFrame(rows)
+    pairs.to_csv(out_path, index=False)
+    return pairs
+
+
+def parse_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--v2_dataset_dir", required=True, help="Dataset generated by build_ae_dataset_v2.py")
+    ap.add_argument("--out_dir", required=True)
+    ap.add_argument("--semantic_labels", required=True)
+    ap.add_argument("--movements", nargs="+", default=["M1", "M2", "M3", "M4", "M5"])
+    return ap.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    v2_root = Path(args.v2_dataset_dir)
+    out_root = Path(args.out_dir)
+    ensure_dir(out_root)
+    write_json(out_root / "build_config.json", vars(args))
+
+    static_dir = out_root / "static_neutral"
+    ensure_dir(static_dir)
+
+    static_N: Dict[str, List[np.ndarray]] = {"train_healthy": [], "eval_healthy": [], "pathological": []}
+    static_M: Dict[str, List[np.ndarray]] = {"train_healthy": [], "eval_healthy": [], "pathological": []}
+    static_meta: Dict[str, List[pd.DataFrame]] = {"train_healthy": [], "eval_healthy": [], "pathological": []}
+
+    manifest = {"movements": {}, "groups": ["train_healthy", "eval_healthy", "pathological"], "source_v2_dataset_dir": str(v2_root)}
+
+    for movement in [m.upper() for m in args.movements]:
+        src_mov = v2_root / movement
+        dst_mov = out_root / movement
+        ensure_dir(dst_mov)
+        manifest["movements"][movement] = {}
+        print(f"Movement {movement}")
+
+        for fn in ["reference_displacement.npy", "reference_envelope_per_marker.csv"]:
+            src = src_mov / fn
+            if src.exists():
+                shutil.copy2(src, dst_mov / fn)
+            else:
+                print(f"  [WARN] Missing {src}")
+
+        for group in ["train_healthy", "eval_healthy", "pathological"]:
+            data = load_group(src_mov, group)
+            copy_group(dst_mov, group, data)
+            N = data["N"]
+            M_neutral = marker_mask_from_neutral(N)
+            meta = data["meta"].copy()
+            meta["movement"] = movement
+            meta["static_source_group"] = group
+
+            static_N[group].append(N)
+            static_M[group].append(M_neutral)
+            static_meta[group].append(meta)
+            manifest["movements"][movement][group] = int(N.shape[0])
+            print(f"  {group}: {N.shape[0]} samples")
+
+    # Concatenate static neutral cohorts across movements.
+    for group in ["train_healthy", "eval_healthy", "pathological"]:
+        if static_N[group]:
+            Ncat = np.concatenate(static_N[group], axis=0).astype(np.float32)
+            Mcat = np.concatenate(static_M[group], axis=0).astype(np.uint8)
+            metacat = pd.concat(static_meta[group], ignore_index=True)
+        else:
+            Ncat = np.zeros((0, 105, 3), dtype=np.float32)
+            Mcat = np.zeros((0, 105), dtype=np.uint8)
+            metacat = pd.DataFrame()
+        # Zero-fill missing neutral markers while preserving mask.
+        Ncat = np.where(np.isfinite(Ncat), Ncat, 0.0).astype(np.float32)
+        np.save(static_dir / f"N_{group}.npy", Ncat)
+        np.save(static_dir / f"M_{group}.npy", Mcat)
+        metacat.to_csv(static_dir / f"metadata_{group}.csv", index=False)
+        manifest[f"static_{group}_n"] = int(Ncat.shape[0])
+
+    create_symmetry_pairs(Path(args.semantic_labels), static_dir / "semantic_symmetry_pairs.csv")
+    write_json(out_root / "dataset_manifest.json", manifest)
+    print(f"[OK] Wrote healthy twin dataset: {out_root}")
+
+
+if __name__ == "__main__":
+    main()
